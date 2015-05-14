@@ -1,4 +1,4 @@
-class WechatPlatformContronller < ApplicationController
+class WechatPlatformController < ApplicationController
 
   def handle_system_event
     logger.info '-----------handle system event------------'
