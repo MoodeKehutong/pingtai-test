@@ -10,6 +10,8 @@ GEM
       activesupport (= 4.1.8)
       rack (~> 1.5.2)
       rack-test (~> 0.6.2)
+    actionpack-xml_parser (1.0.2)
+      actionpack (>= 4.0.0, < 5)
     actionview (4.1.8)
       activesupport (= 4.1.8)
       builder (~> 3.1)
@@ -27,6 +29,7 @@ GEM
       minitest (~> 5.1)
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
+    aescrypt (1.0.0)
     arel (5.0.1.20140414130214)
     builder (3.2.2)
     coffee-rails (4.0.1)
@@ -36,9 +39,13 @@ GEM
       coffee-script-source
       execjs
     coffee-script-source (1.9.1.1)
+    domain_name (0.5.24)
+      unf (>= 0.0.5, < 1.0.0)
     erubis (2.7.0)
     execjs (2.5.2)
     hike (1.2.3)
+    http-cookie (1.0.2)
+      domain_name (~> 0.5)
     i18n (0.7.0)
     jbuilder (2.2.13)
       activesupport (>= 3.0.0, < 5)
@@ -53,6 +60,7 @@ GEM
     mime-types (2.5)
     minitest (5.6.1)
     multi_json (1.11.0)
+    netrc (0.10.3)
     rack (1.5.3)
     rack-test (0.6.3)
       rack (>= 1.0)
@@ -74,6 +82,10 @@ GEM
     raindrops (0.13.0)
     rake (10.4.2)
     rdoc (4.2.0)
+    rest-client (1.8.0)
+      http-cookie (>= 1.0.2, < 2.0)
+      mime-types (>= 1.16, < 3.0)
+      netrc (~> 0.7)
     sass (3.2.19)
     sass-rails (4.0.5)
       railties (>= 4.0.0, < 5.0)
@@ -104,6 +116,9 @@ GEM
     uglifier (2.7.1)
       execjs (>= 0.3.0)
       json (>= 1.8.0)
+    unf (0.1.4)
+      unf_ext
+    unf_ext (0.0.7.1)
     unicorn (4.9.0)
       kgio (~> 2.6)
       rack
@@ -113,10 +128,14 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  actionpack-xml_parser (~> 1.0.1)
+  aescrypt
   coffee-rails (~> 4.0.0)
   jbuilder (~> 2.0)
   jquery-rails
+  multi_json
   rails (= 4.1.8)
+  rest-client
   sass-rails (~> 4.0.3)
   sdoc (~> 0.4.0)
   spring

@@ -1,6 +1,7 @@
 require File.expand_path('../boot', __FILE__)
 
 require 'rails/all'
+require 'action_dispatch/xml_params_parser'
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -19,5 +20,14 @@ module PingtaiTest
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
     # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
     # config.i18n.default_locale = :de
+
+    config.middleware.insert_after ActionDispatch::ParamsParser, ActionDispatch::XmlParamsParser
+    account_info = YAML.load_file("#{Rails.root}/config/account_info.yml")
+    $app_id = account_info["app_id"]
+    $app_secret = account_info["app_secret"]
+    $key = account_info["key"]
+    $token= account_info["token"]
+    p '----'
+    p account_info
   end
 end

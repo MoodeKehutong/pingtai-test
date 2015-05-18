@@ -38,3 +38,7 @@ gem 'unicorn'
 # Use debugger
 # gem 'debugger', group: [:development, :test]
 
+gem 'actionpack-xml_parser', '~> 1.0.1'
+gem 'aescrypt'
+gem 'multi_json'
+gem 'rest-client'
