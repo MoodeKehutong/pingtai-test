@@ -62,12 +62,66 @@ class WechatPlatformController < ApplicationController
     render json: raw
   end
 
+  def handle_wechat_message
+    text_xml_string = '<xml>'\
+                      '<ToUserName><![CDATA[%s]]></ToUserName>'\
+                      '<FromUserName><![CDATA[%s]]></FromUserName>'\
+                      '<CreateTime>%s</CreateTime>'\
+                      '<MsgType><![CDATA[text]]></MsgType>'\
+                      '<Content><![CDATA[nihao]]></Content>'\
+                      '<FuncFlag>0</FuncFlag>'\
+                      '</xml>'
+    
+    raw_xml = decrypt(params[:xml][:Encrypt])
+    new_xml = raw_xml[20..-19]
+    xml = Hash.from_xml(new_xml) 
+    to_user_name = xml["xml"]["FromUserName"]
+    from_user_name = xml["xml"]["ToUserName"]
+    time = Time.now.to_i
+    msg = text_xml_string%[to_user_name, from_user_name, time] 
+    logger.info msg
+    encrypted = encrypt(msg)
+    decrypt(encrypted)
+    
+    render_xml = '<xml>'\
+		 "<ToUserName><![CDATA[#{to_user_name}]]></ToUserName>"\
+		 "<Encrypt><![CDATA[#{encrypted}]]></Encrypt>"\
+		 '</xml>'
+    logger.info render_xml
+    asd = "<xml>
+<ToUserName><![CDATA[o9L_UjvOsVwTuxNZSVbIKkTfXXRI]]></ToUserName>
+<Encrypt><![CDATA[gDhLt7VO7hpiT6C7jrWGDhgnysLPEjSA6qhWihLlsEzOfZzmKx8zOtiBtUUrjN/gn4FfIj7VNOVeWWCz9pCQbNPfLfF+fNf6pZBIYyckjXzt7eRhnoAdtjRAM/R18Y+bzWwDpCPSltkCdYpUACZf8tMrTXvEVFq3sKRRW2WAZqzWdNd06xpyRYY8A7XDRDDPrfYDErwWPRgHZ2ZHYOPZ6hnvc9c1c+yWYT3LggnCTgLcLHh/fDLkrktduBa39dLuijHHBBIYeDt1CFx9igD6fsTH5ahHzo1+sT68bjyK9hNCQytwdacw7rOtpU/LNwIkBe8IAkF3Ul+WBhxKr2S4zpzjgwZHF9DCJ6o8Joyq4vuxsO/ubeDFshEbMZ5Ko8zDVyXrhIrEZMxeqVPE9uvoEJS/BP2xf/HbyV+LTmf2QZY=]]></Encrypt>
+<MsgSignature><![CDATA[c098858f26451cc90d907dfc5abbbdb1a820f85f]]></MsgSignature>
+<TimeStamp>1432026751</TimeStamp>
+<Nonce><![CDATA[1939177440]]></Nonce>
+</xml>"
+    render xml: asd 
+  end
+
   #=====================================分割线==========================
 
   def decrypt(text)
     encoding_aes_key = $key
-    aes_key = Base64.decode64("#{encoding_aes_key}+")
-    AESCrypt.decrypt_data(Base64.decode64(text), aes_key, aes_key[0..15], "AES-256-CBC")
+    aes_key = Base64.decode64("#{encoding_aes_key}=")
+    a = AESCrypt.decrypt_data(Base64.decode64(text), aes_key, aes_key[0..15], "AES-256-CBC")
+    logger.info a
+    a
+  end
+  
+  def encrypt(text)
+    encoding_aes_key = $key
+    aes_key = Base64.decode64("#{encoding_aes_key}=")
+    random_string = "a" * 16
+    msg_len = [text.length].pack('N')
+    to_encrypt = random_string + msg_len + text + $app_id
+    logger.info "------#{aes_key.length}--------#{to_encrypt.length}"
+    buwei_count = aes_key.length - (to_encrypt.length % aes_key.length)
+    buwei_count = aes_key.length if buwei_count == 0
+    character = buwei_count.chr
+    to_encrypt += character * buwei_count
+    logger.info to_encrypt
+    encrypted = AESCrypt.encrypt_data(to_encrypt, aes_key, aes_key[0..15], "AES-256-CBC")
+    Base64.encode64(encrypted)
   end
 
   def get_component_verify_ticket(component_appid, component_appsecret, component_verify_ticket)

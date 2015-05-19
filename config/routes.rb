@@ -9,4 +9,6 @@ Rails.application.routes.draw do
   get "/user/:id/info", to: 'wechat_platform#show_user_info'
   get "/user/:id/token", to: 'wechat_platform#refresh_user_access_token'
   get "/user/:id/text", to: 'wechat_platform#post_text_to_wechat'
+
+  post "/wechat_platform/:app_id/messages", to: 'wechat_platform#handle_wechat_message'
 end
