@@ -1,3 +1,4 @@
+# encoding: utf-8
 class WechatPlatformController < ApplicationController
 
   def handle_system_event
@@ -68,7 +69,7 @@ class WechatPlatformController < ApplicationController
                       '<FromUserName><![CDATA[%s]]></FromUserName>'\
                       '<CreateTime>%s</CreateTime>'\
                       '<MsgType><![CDATA[text]]></MsgType>'\
-                      '<Content><![CDATA[nihao]]></Content>'\
+                      "<Content><![CDATA[%s]]></Content>"\
                       '<FuncFlag>0</FuncFlag>'\
                       '</xml>'
     
@@ -77,25 +78,36 @@ class WechatPlatformController < ApplicationController
     xml = Hash.from_xml(new_xml) 
     to_user_name = xml["xml"]["FromUserName"]
     from_user_name = xml["xml"]["ToUserName"]
-    time = Time.now.to_i
-    msg = text_xml_string%[to_user_name, from_user_name, time] 
+    text = xml["xml"]["Content"]
+    time = "1432093910"
+    msg = text_xml_string%[to_user_name, from_user_name, time, text] 
+    #msg = "<xml><ToUserName><![CDATA[#{to_user_name}]]></ToUserName><FromUserName><![CDATA[#{from_user_name}]]></FromUserName><CreateTime>#{time}</CreateTime><MsgType><![CDATA[news]]></MsgType><ArticleCount>1</ArticleCount><Articles><item><Title><![CDATA[#{text}]]></Title><Description><![CDATA[#{text}]]></Description><PicUrl><![CDATA[http://pingtai-test.kehutong.com/image1.png]]></PicUrl><Url><![CDATA[www.baidu.com]]></Url></item></Articles></xml>"
     logger.info msg
-    encrypted = encrypt(msg)
-    decrypt(encrypted)
+    logger.info msg.bytesize
+    encrypted = encrypt(msg.encode('utf-8'))
+    timestamp = "1432093910"
+    nonce = "1775384677"
+    token = "moode10086"
+    logger.info "--#{token}==#{nonce}#++#{timestamp}**#{encrypted}"
+    signature = Digest::SHA1.hexdigest([token, nonce, timestamp, encrypted].sort.join)
     
+    # "<ToUserName><![CDATA[#{to_user_name}]]></ToUserName>"\
     render_xml = '<xml>'\
-		 "<ToUserName><![CDATA[#{to_user_name}]]></ToUserName>"\
 		 "<Encrypt><![CDATA[#{encrypted}]]></Encrypt>"\
+		 "<MsgSignature><![CDATA[#{signature}]]></MsgSignature>"\
+		 "<TimeStamp>#{timestamp}</TimeStamp>"\
+		 "<Nonce><![CDATA[#{nonce}]]></Nonce>"\
 		 '</xml>'
     logger.info render_xml
-    asd = "<xml>
-<ToUserName><![CDATA[o9L_UjvOsVwTuxNZSVbIKkTfXXRI]]></ToUserName>
-<Encrypt><![CDATA[gDhLt7VO7hpiT6C7jrWGDhgnysLPEjSA6qhWihLlsEzOfZzmKx8zOtiBtUUrjN/gn4FfIj7VNOVeWWCz9pCQbNPfLfF+fNf6pZBIYyckjXzt7eRhnoAdtjRAM/R18Y+bzWwDpCPSltkCdYpUACZf8tMrTXvEVFq3sKRRW2WAZqzWdNd06xpyRYY8A7XDRDDPrfYDErwWPRgHZ2ZHYOPZ6hnvc9c1c+yWYT3LggnCTgLcLHh/fDLkrktduBa39dLuijHHBBIYeDt1CFx9igD6fsTH5ahHzo1+sT68bjyK9hNCQytwdacw7rOtpU/LNwIkBe8IAkF3Ul+WBhxKr2S4zpzjgwZHF9DCJ6o8Joyq4vuxsO/ubeDFshEbMZ5Ko8zDVyXrhIrEZMxeqVPE9uvoEJS/BP2xf/HbyV+LTmf2QZY=]]></Encrypt>
-<MsgSignature><![CDATA[c098858f26451cc90d907dfc5abbbdb1a820f85f]]></MsgSignature>
-<TimeStamp>1432026751</TimeStamp>
-<Nonce><![CDATA[1939177440]]></Nonce>
-</xml>"
-    render xml: asd 
+    render xml: render_xml 
+  end
+
+  def test_oauth
+    logger.info params
+    code = params[:code]
+    appid = params[:appid]
+    a = RestClient.get("https://api.weixin.qq.com/sns/oauth2/component/access_token?appid=#{appid}&code=#{code}&grant_type=authorization_code&component_appid=#{$app_id}&component_access_token=#{$component_verify_token}")
+    render json: a
   end
 
   #=====================================分割线==========================
@@ -103,7 +115,16 @@ class WechatPlatformController < ApplicationController
   def decrypt(text)
     encoding_aes_key = $key
     aes_key = Base64.decode64("#{encoding_aes_key}=")
-    a = AESCrypt.decrypt_data(Base64.decode64(text), aes_key, aes_key[0..15], "AES-256-CBC")
+    aes = OpenSSL::Cipher::Cipher.new('AES-256-CBC')
+    aes.decrypt
+    aes.key = aes_key
+    aes.iv = aes_key[0..15]
+    b = aes.update(Base64.decode64(text))
+    begin
+      a = b + aes.final
+    rescue
+      a = b
+    end
     logger.info a
     a
   end
@@ -111,17 +132,23 @@ class WechatPlatformController < ApplicationController
   def encrypt(text)
     encoding_aes_key = $key
     aes_key = Base64.decode64("#{encoding_aes_key}=")
-    random_string = "a" * 16
-    msg_len = [text.length].pack('N')
+    random_string = ("a" * 16)
+    msg_len = [text.bytesize].pack('N')
+    logger.info "--#{aes_key.encoding}==#{msg_len.encoding}++#{text.encoding}"
     to_encrypt = random_string + msg_len + text + $app_id
-    logger.info "------#{aes_key.length}--------#{to_encrypt.length}"
-    buwei_count = aes_key.length - (to_encrypt.length % aes_key.length)
-    buwei_count = aes_key.length if buwei_count == 0
+    logger.info "------#{aes_key.bytesize}--------#{to_encrypt.bytesize}"
+    buwei_count = aes_key.bytesize - (to_encrypt.bytesize % aes_key.bytesize)
+    buwei_count = aes_key.bytesize if buwei_count == 0
     character = buwei_count.chr
     to_encrypt += character * buwei_count
-    logger.info to_encrypt
-    encrypted = AESCrypt.encrypt_data(to_encrypt, aes_key, aes_key[0..15], "AES-256-CBC")
-    Base64.encode64(encrypted)
+    #encrypted = AESCrypt.encrypt_data(to_encrypt, aes_key, aes_key[0..15], "AES-256-CBC")
+    aes = OpenSSL::Cipher::Cipher.new('AES-256-CBC')
+    aes.encrypt
+    aes.key = aes_key
+    aes.iv = aes_key[0..15]
+    encrypted = aes.update(to_encrypt)
+    logger.info "_______#{Base64.encode64(encrypted + aes.final).gsub("\n", '')}_____________"
+    Base64.encode64(encrypted).gsub("\n", '')
   end
 
   def get_component_verify_ticket(component_appid, component_appsecret, component_verify_ticket)

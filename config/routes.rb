@@ -11,4 +11,5 @@ Rails.application.routes.draw do
   get "/user/:id/text", to: 'wechat_platform#post_text_to_wechat'
 
   post "/wechat_platform/:app_id/messages", to: 'wechat_platform#handle_wechat_message'
+  get "/oauth_test", to: 'wechat_platform#test_oauth'
 end
